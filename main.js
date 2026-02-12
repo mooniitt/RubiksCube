@@ -12,6 +12,7 @@ const SMOOTHNESS = 4;
 
 // Global variables
 let camera, scene, renderer, controls;
+let cameraManager; // Global reference
 const cubies = []; 
 const group = new THREE.Group(); 
 // Map logical colors (string) to Hex
@@ -23,6 +24,34 @@ const COLOR_MAP = {
     'red': 0xB90000,
     'orange': 0xFF5900
 };
+
+// Camera Sync Configuration
+const BASE_RADIUS = 8;
+const CAM_Y = 5;
+let targetRadius = BASE_RADIUS;
+
+// Dynamic Face Angles getter
+function getFaceTarget(face, radius = targetRadius) {
+    // Defines relative direction vector * radius
+    const dirs = {
+        'red': { x: 0, z: 1 },       // Front
+        'orange': { x: 0, z: -1 },   // Back
+        'blue': { x: 1, z: 0 },      // Right
+        'green': { x: -1, z: 0 },    // Left
+        'white': { x: 0, z: 0, y: 1 }, // Top (Special)
+        'yellow': { x: 0, z: 0, y: -1 } // Bottom (Special)
+    };
+    
+    if (!dirs[face]) return null;
+    const d = dirs[face];
+    
+    if (face === 'white' || face === 'yellow') {
+        const offset = 0.1; // Avoid Gimbal lock
+        return new THREE.Vector3(offset, d.y * radius, offset);
+    }
+    
+    return new THREE.Vector3(d.x * radius, CAM_Y, d.z * radius);
+}
 
 // State
 let cubeState = {
@@ -40,9 +69,11 @@ let solutionMoves = [];
 let currentMoveIndex = 0;
 
 init();
-new CameraManager(onFaceScanned); 
+// Initialize CameraManager with both callbacks: (onScan, onTrack)
+cameraManager = new CameraManager(onFaceScanned, onFaceDetected); 
 solverManager = new SolverManager();
 setupTeachingControls();
+setupOrientationSync(); // Ensure this is called
 animate();
 
 function onFaceScanned(faceName, colors) {
@@ -52,28 +83,53 @@ function onFaceScanned(faceName, colors) {
     }
 }
 
+// Move History
+let moveHistory = [];
+
 function setupTeachingControls() {
     const solveBtn = document.getElementById('solve-btn');
+    const scrambleBtn = document.getElementById('scramble-btn');
     const prevBtn = document.getElementById('prev-btn');
     const nextBtn = document.getElementById('next-btn');
     const playBtn = document.getElementById('play-btn');
-    const controlsDiv = document.getElementById('teaching-controls'); // Initially hidden? No, css handles it.
+    const controlsDiv = document.getElementById('teaching-controls');
     
-    // Show controls when camera is toggled? Or always?
-    // Let's make sure it's visible.
     document.getElementById('teaching-controls').classList.remove('hidden');
 
+    scrambleBtn.addEventListener('click', () => {
+        if(isAnimating) return;
+        scrambleCube();
+        
+        // Reset solution UI
+        document.getElementById('solution-text').textContent = "";
+        document.getElementById('step-controls').style.display = 'none';
+        solutionMoves = [];
+    });
+
     solveBtn.addEventListener('click', () => {
-        const solution = solverManager.solve(cubeState);
+        // Strategy: If we have a scramble history, use it (Reverse).
+        // Otherwise, use solverManager (Mock/Camera).
+        
+        let solutionStr = "";
+        
+        if (moveHistory.length > 0) {
+            console.log("Using Move History for Solution", moveHistory);
+            // Reverse the history
+            const reversed = [...moveHistory].reverse().map(m => getInverseMove(m));
+            solutionStr = reversed.join(" ");
+        } else {
+            solutionStr = solverManager.solve(cubeState);
+        }
+
         const text = document.getElementById('solution-text');
         
-        if (solution.includes("Error")) {
-            text.textContent = "无法求解，请检查颜色录入是否正确";
+        if (solutionStr.includes("Error")) {
+            text.textContent = "无法求解，请检查颜色";
             text.style.color = "red";
         } else {
-            text.textContent = solution;
+            text.textContent = "还原步骤: " + solutionStr;
             text.style.color = "#4A90E2";
-            solutionMoves = solution.split(' ').filter(m => m.length > 0);
+            solutionMoves = solutionStr.split(' ').filter(m => m.length > 0);
             currentMoveIndex = 0;
             document.getElementById('step-controls').style.display = 'flex';
         }
@@ -82,7 +138,7 @@ function setupTeachingControls() {
     nextBtn.addEventListener('click', () => {
         if (currentMoveIndex < solutionMoves.length && !isAnimating) {
             const move = solutionMoves[currentMoveIndex];
-            rotateLayer(move, () => {
+            rotateLayer(move, 500, () => {
                 currentMoveIndex++;
                 highlightMove(currentMoveIndex);
             });
@@ -94,7 +150,7 @@ function setupTeachingControls() {
             currentMoveIndex--;
             const move = solutionMoves[currentMoveIndex];
             const inverseMove = getInverseMove(move);
-            rotateLayer(inverseMove, () => {
+            rotateLayer(inverseMove, 500, () => { // Reverse move visually, but don't add to history?
                 highlightMove(currentMoveIndex);
             });
         }
@@ -105,10 +161,10 @@ function setupTeachingControls() {
         const playNext = () => {
             if (currentMoveIndex < solutionMoves.length) {
                 const move = solutionMoves[currentMoveIndex];
-                rotateLayer(move, () => {
+                rotateLayer(move, 500, () => {
                     currentMoveIndex++;
                     highlightMove(currentMoveIndex);
-                    setTimeout(playNext, 500); 
+                    setTimeout(playNext, 200); 
                 });
             }
         };
@@ -116,8 +172,33 @@ function setupTeachingControls() {
     });
 }
 
+function scrambleCube() {
+    const moves = ['U', 'D', 'L', 'R', 'F', 'B'];
+    const count = 20;
+    const scrambleSeq = [];
+    
+    for(let i=0; i<count; i++) {
+        const m = moves[Math.floor(Math.random() * moves.length)];
+        const suffix = Math.random() < 0.5 ? "'" : (Math.random() < 0.2 ? "2" : "");
+        scrambleSeq.push(m + suffix);
+    }
+    
+    console.log("Scramble:", scrambleSeq.join(" "));
+    
+    let i = 0;
+    const nextMove = () => {
+        if (i >= scrambleSeq.length) return;
+        // Fast scramble: 150ms
+        rotateLayer(scrambleSeq[i], 150, () => {
+            i++;
+            nextMove();
+        }, true); // isScramble = true
+    };
+    nextMove();
+}
+
 function highlightMove(index) {
-    // Optional: Highlight current move in UI text
+    // Optional
 }
 
 function getInverseMove(move) {
@@ -126,118 +207,73 @@ function getInverseMove(move) {
     return move + "'";
 }
 
-// Axis: 'x', 'y', 'z'
-// Value: -1, 0, 1 (coordinate)
-// Direction: 1 (clockwise), -1 (counter-clockwise)
-function rotateLayer(move, callback) {
+// rotateLayer updated to support duration and history
+function rotateLayer(move, duration = 300, callback, isScramble = false) {
     if (isAnimating) return;
     isAnimating = true;
 
-    // Parse move string "U", "U'", "U2", etc.
-    // U (Top): y=1, axis y, dir -1 (Wait, standard notation check)
-    // Standard: Right-handed rule. Thumb points axis positive. Fingers curl.
-    // U: Up face clockwise. Axis Y. Positive Y is Up. 
-    // D: Down face cw. Axis Y. Negative Y is Down.
-    // R: Right face cw. Axis X.
-    // L: Left face cw. Axis X.
-    // F: Front face cw. Axis Z.
-    // B: Back face cw. Axis Z.
-
+    // ... (parsing char, angle logic is same)
     let char = move[0];
     let suffix = move.substring(1);
-    let angle = Math.PI / 2; // 90 deg
+    let angle = Math.PI / 2; 
     
     if (suffix === "'") angle = -Math.PI / 2;
     if (suffix === "2") angle = Math.PI;
 
     let axisVec = new THREE.Vector3();
-    let filter = null;
     let groupToRotate = new THREE.Group();
-    
-    // We attach objects to a temporary group, rotate the group, then detach.
-    // Detach preserves world transforms. Then we must update logical coords.
-    
-    // Select cubies based on move
-    // Note: Our coordinates are x: -1..1, y: -1..1, z: -1..1
-    
     let selection = [];
 
     switch(char) {
-        case 'U': // Top y=1
-            axisVec.set(0, 1, 0);
-            selection = cubies.filter(c => Math.abs(c.position.y - (CUBE_SIZE + SPACING)) < 0.1);
-            angle *= -1; // Three.js Y-up vs Standard notation? Let's test.
-            // Standard U looks down from top, clockwise.
-            // ThreeJS rotation around +Y is CCW? 
-            break;
-        case 'D': // Bottom y=-1
-            axisVec.set(0, 1, 0);
-            selection = cubies.filter(c => Math.abs(c.position.y - (-CUBE_SIZE - SPACING)) < 0.1);
-            angle *= 1; // Looking from bottom?
-            break;
-        case 'R': // Right x=1
-            axisVec.set(1, 0, 0);
-            selection = cubies.filter(c => Math.abs(c.position.x - (CUBE_SIZE + SPACING)) < 0.1);
-            angle *= -1; 
-            break;
-        case 'L': // Left x=-1
-            axisVec.set(1, 0, 0);
-            selection = cubies.filter(c => Math.abs(c.position.x - (-CUBE_SIZE - SPACING)) < 0.1);
-            angle *= 1;
-            break;
-        case 'F': // Front z=1
-            axisVec.set(0, 0, 1);
-            selection = cubies.filter(c => Math.abs(c.position.z - (CUBE_SIZE + SPACING)) < 0.1);
-            angle *= -1;
-            break;
-        case 'B': // Back z=-1
-            axisVec.set(0, 0, 1);
-            selection = cubies.filter(c => Math.abs(c.position.z - (-CUBE_SIZE - SPACING)) < 0.1);
-            angle *= 1;
-            break;
+        case 'U': axisVec.set(0, 1, 0); selection = cubies.filter(c => Math.abs(c.position.y - (CUBE_SIZE + SPACING)) < 0.1); angle *= -1; break;
+        case 'D': axisVec.set(0, 1, 0); selection = cubies.filter(c => Math.abs(c.position.y - (-CUBE_SIZE - SPACING)) < 0.1); angle *= 1; break;
+        case 'R': axisVec.set(1, 0, 0); selection = cubies.filter(c => Math.abs(c.position.x - (CUBE_SIZE + SPACING)) < 0.1); angle *= -1; break;
+        case 'L': axisVec.set(1, 0, 0); selection = cubies.filter(c => Math.abs(c.position.x - (-CUBE_SIZE - SPACING)) < 0.1); angle *= 1; break;
+        case 'F': axisVec.set(0, 0, 1); selection = cubies.filter(c => Math.abs(c.position.z - (CUBE_SIZE + SPACING)) < 0.1); angle *= -1; break;
+        case 'B': axisVec.set(0, 0, 1); selection = cubies.filter(c => Math.abs(c.position.z - (-CUBE_SIZE - SPACING)) < 0.1); angle *= 1; break;
     }
 
-    // Add to group
     scene.add(groupToRotate);
-    // groupToRotate.position.set(0,0,0); // Default
-    
-    // Parent change dance
-    selection.forEach(c => {
-        groupToRotate.attach(c); // Attach preserves world transform
-    });
+    selection.forEach(c => groupToRotate.attach(c));
 
-    // Animate
-    const startObj = { t: 0 };
-    const endObj = { t: 1 };
-    
-    // Simple interpolation loop without TWEEN lib for deps
     const startTime = Date.now();
-    const duration = 300; // ms
-
+    
     const animateRotation = () => {
         const now = Date.now();
         const progress = Math.min((now - startTime) / duration, 1);
-        // Easing? Linear for now.
         
         groupToRotate.quaternion.setFromAxisAngle(axisVec, angle * progress);
 
         if (progress < 1) {
             requestAnimationFrame(animateRotation);
         } else {
-            // Done
-            // Detach to bake transform back to world
             selection.forEach(c => {
                 scene.attach(c);
-                
-                // Snap position and rotation to nearest safe values to prevent drift
                 c.position.x = Math.round(c.position.x * 10) / 10;
                 c.position.y = Math.round(c.position.y * 10) / 10;
                 c.position.z = Math.round(c.position.z * 10) / 10;
-                
                 c.updateMatrixWorld();
             });
             scene.remove(groupToRotate);
             isAnimating = false;
+            
+            // Track history if it's a scramble or manual move (not part of solution playback)
+            // Ideally we track EVERYTHING that changes state.
+            // But if we are Playing the Solution, we are "Undoing" the history technically?
+            // Let's simplified: 
+            // - If Scramble: Add to history.
+            // - If User click (TODO): Add to history.
+            // - If Solve Playback: Do NOT add to history (or treat as consuming history).
+            
+            if (isScramble) {
+                moveHistory.push(move);
+            } else {
+                // If it's a manual rotation (not implemented yet) we would push.
+                // For now, solve playback shouldn't push to history to avoid infinite loops if we used it.
+                // But wait, if we scramble, then solve, the solve moves effectively cancel the history.
+                // We'll just leave history as comes from Scramble.
+            }
+
             if (callback) callback();
         }
     };
@@ -274,32 +310,7 @@ function setupOrientationSync() {
 }
 
 // Camera Position Targets for each face color
-const FACE_POSITIONS = {
-    'red': { pos: [6, 4, 6], lookAt: [0, 0, 0] },     // Front (Typical start pos)
-    'orange': { pos: [-6, 4, -6], lookAt: [0, 0, 0] },// Back
-    'blue': { pos: [6, 4, -6], lookAt: [0, 0, 0] },   // Right ?? Wait, Right is +x. 
-    // Let's debug positions:
-    // Front(Red) is +z. Camera at (x,y,z) looking at 0.
-    // Right(Blue) is +x. Camera should be at (+x, +y, 0).
-    // Left(Green) is -x. Camera at (-x, +y, 0).
-    // Back(Orange) is -z. Camera at (0, +y, -z).
-    // Top(White) is +y. Camera at (0, +y, 0).
-    // Bottom(Yellow) is -y.
-};
-
-// Refined positions
-// Assuming Camera orbits around 0,0,0 at radius ~8
-const RADIUS_CAM = 8;
-const CAM_Y = 5;
-
-const FACE_ANGLES = {
-    'red': { x: 0, z: RADIUS_CAM },       // Front
-    'orange': { x: 0, z: -RADIUS_CAM },   // Back
-    'blue': { x: RADIUS_CAM, z: 0 },      // Right
-    'green': { x: -RADIUS_CAM, z: 0 },    // Left
-    'white': { x: 0, z: 0, y: RADIUS_CAM }, // Top (Special handling)
-    'yellow': { x: 0, z: 0, y: -RADIUS_CAM } // Bottom
-};
+// Camera constants moved to top
 
 let currentFace = 'red';
 
@@ -308,21 +319,17 @@ function onFaceDetected(color) {
     
     // Debounce: verify color stability if needed, but for now direct switch
     // Only switch if it's a valid face color
-    if (!FACE_ANGLES[color]) return;
+    // Only switch if it's a valid face color
+    const targetVec = getFaceTarget(color);
+    if (!targetVec) return;
     
     console.log("Syncing to face:", color);
     currentFace = color;
     
-    const target = FACE_ANGLES[color];
-    
     // Smoothly animate camera position
     // We can use a simple generic interpolation variable
     const startPos = camera.position.clone();
-    
-    let endPos;
-    if (color === 'white') endPos = new THREE.Vector3(0.1, RADIUS_CAM, 0); // Slight offset to avoid Gimbal lock
-    else if (color === 'yellow') endPos = new THREE.Vector3(0.1, -RADIUS_CAM, 0);
-    else endPos = new THREE.Vector3(target.x, CAM_Y, target.z);
+    const endPos = targetVec;
 
     // Simple tween
     let t = 0;
@@ -344,7 +351,7 @@ function onFaceDetected(color) {
     animateCam();
 }
 
-let cameraManager; // Move scope out
+// cameraManager moved to top scope
 
 function init() {
     // Scene
@@ -353,7 +360,9 @@ function init() {
 
     // Camera
     camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
-    camera.position.set(FACE_ANGLES.red.x, CAM_Y, FACE_ANGLES.red.z); // Start at Front
+    updateCameraAdaptive(); // Calc initial radius
+    const startPos = getFaceTarget('red', targetRadius);
+    camera.position.set(startPos.x, startPos.y, startPos.z); 
     camera.lookAt(0, 0, 0);
 
     // Renderer
@@ -535,6 +544,31 @@ function onWindowResize() {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
+    
+    updateCameraAdaptive();
+}
+
+function updateCameraAdaptive() {
+    // Adjust radius based on aspect ratio
+    // If aspect < 1 (portrait), we need to distance the camera to fit horizontal width
+    const aspect = camera.aspect;
+    if (aspect < 1) {
+        targetRadius = BASE_RADIUS / aspect; 
+    } else {
+        targetRadius = BASE_RADIUS;
+    }
+    
+    // Smoothly move camera if needed? Or just jump.
+    // For specific views (Face Sync), we should respect current face.
+    // But if user is orbit controlling, we shouldn't force jump.
+    // We only update the sync target variables.
+    
+    // If NOT interacting and aligned to a face, maybe update?
+    // Let's just update the targetRadius state. The next sync or frame will use it.
+    
+    // Force update visual if we are in a "nice" view?
+    // Let's just update controls.minDistance/max if needed.
+    // controls.maxDistance = targetRadius * 2;
 }
 
 function animate() {

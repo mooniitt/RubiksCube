@@ -114,9 +114,11 @@ body {
 
 #main-controls {
     position: absolute;
-    bottom: 30px;
-    left: 50%;
-    transform: translateX(-50%);
+    top: 20px;
+    right: 20px;
+    bottom: auto;
+    left: auto;
+    transform: none;
     z-index: 100;
 }
 
@@ -201,6 +203,71 @@ button:disabled {
     transform: translateY(-2px);
 }
 
-.hidden {
-    display: none !important;
+
+/* Mobile Optimization */
+@media (max-width: 600px) {
+    #teaching-controls {
+        width: 90%;
+        bottom: 80px;
+        padding: 10px;
+        align-items: center;
+    }
+
+    .control-row {
+        flex-wrap: wrap;
+        justify-content: center;
+        width: 100%;
+        gap: 8px;
+    }
+
+    button {
+        padding: 10px 20px; /* Larger touch target */
+        font-size: 14px;
+        flex: 1 0 auto; /* Allow grow */
+        white-space: nowrap;
+    }
+
+    #solution-text {
+        width: 100%;
+        text-align: center;
+        margin-top: 5px;
+        white-space: normal;
+        word-break: break-all;
+    }
+
+    #camera-container {
+        width: 90%;
+        height: auto;
+        left: 50%;
+        top: 10%;
+        transform: translateX(-50%);
+        max-height: 80vh;
+    }
+    
+    #camera-container.hidden {
+        transform: translateX(-50%) translateY(-150%); /* Slide up */
+    }
+
+    #camera-feed {
+        height: 300px; /* Fixed height for consistency */
+    }
+
+    #grid-overlay {
+        width: 100%;
+        height: 300px; /* Match video */
+    }
+
+    #toggle-camera-btn {
+        width: 90%;
+        justify-content: center;
+        bottom: 20px; /* Lift up a bit */
+    }
+    
+    #main-controls {
+        width: auto;
+        top: 20px;
+        right: 20px;
+        bottom: auto;
+        justify-content: flex-end;
+    }
 }
