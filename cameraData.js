@@ -1,3 +1,5 @@
+import { t } from './i18n.js';
+
 export class CameraManager {
     constructor(onColorDetected, onFaceDetected) {
         this.video = document.getElementById('camera-feed');
@@ -69,25 +71,25 @@ export class CameraManager {
 
     updateInstruction() {
         const faceMap = {
-            'front': '前 (Front)',
-            'right': '右 (Right)',
-            'back': '后 (Back)',
-            'left': '左 (Left)',
-            'top': '上 (Top)',
-            'bottom': '下 (Bottom)'
+            'front': t('face_front'),
+            'right': t('face_right'),
+            'back': t('face_back'),
+            'left': t('face_left'),
+            'top': t('face_top'),
+            'bottom': t('face_bottom')
         };
         const faceName = this.scanOrder[this.currentStage];
         const btn = document.getElementById('scan-btn');
         const instruction = document.getElementById('instruction');
 
         if (this.currentStage >= this.scanOrder.length) {
-            btn.textContent = "扫描完成";
+            btn.textContent = t('scan_done');
             btn.disabled = true;
-            instruction.textContent = "所有面已扫描完毕！";
+            instruction.textContent = t('scan_done');
         } else {
-            btn.textContent = `扫描 ${faceMap[faceName]}`;
+            btn.textContent = `${t('scan_btn_prefix')} ${faceMap[faceName]}`;
             btn.disabled = false;
-            instruction.textContent = `请对准 ${faceMap[faceName]} 面，确保中心块颜色匹配。`;
+            instruction.textContent = t('instruction_scan', { face: faceMap[faceName] });
         }
     }
 

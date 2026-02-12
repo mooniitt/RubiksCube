@@ -27,10 +27,10 @@
     <div id="ui-container">
         <!-- Top Bar -->
         <header class="top-bar glass-panel">
-            <h1>Rubik's 3D</h1>
+            <h1 data-i18n="app_title">Rubik's 3D Pro</h1>
             <div class="actions">
                 <button id="toggle-camera-btn" class="btn-icon" aria-label="Toggle Camera">
-                    📷 <span>AR 同步</span>
+                    <span data-i18n="toggle_camera">📷 AR 同步</span>
                 </button>
             </div>
         </header>
@@ -38,7 +38,7 @@
         <!-- Camera Interface (Hidden by default) -->
         <div id="camera-container" class="glass-panel hidden">
             <div class="camera-header">
-                <h3>色彩扫描</h3>
+                <h3 data-i18n="scan_header">色彩扫描</h3>
                 <button id="close-camera" class="btn-text">✕</button>
             </div>
             
@@ -54,8 +54,8 @@
             </div>
             
             <div id="camera-controls">
-                <div id="instruction">请对准 F (前)</div>
-                <button id="scan-btn" class="btn-primary-small">开始扫描</button>
+                <div id="instruction" data-i18n="instruction_front">请对准 F (前)</div>
+                <button id="scan-btn" class="btn-primary-small" data-i18n="start_scan">开始扫描</button>
             </div>
         </div>
 
@@ -66,8 +66,8 @@
                  <!-- Sync Toggle placeholder, inserted by JS -->
                  
                  <div class="control-group">
-                    <button id="scramble-btn" class="btn-secondary">🔀 随机打乱</button>
-                    <button id="solve-btn" class="btn-primary">🧠 还原求解</button>
+                    <button id="scramble-btn" class="btn-secondary" data-i18n="scramble_btn">🔀 随机打乱</button>
+                    <button id="solve-btn" class="btn-primary" data-i18n="solve_btn">🧠 还原求解</button>
                  </div>
 
                  <div id="solution-display" class="hidden">
@@ -85,7 +85,7 @@
     <!-- Loading Screen -->
     <div id="loading">
         <div class="spinner"></div>
-        <p>Loading 3D Engine...</p>
+        <p data-i18n="loading">Loading 3D Engine...</p>
     </div>
 
     <script type="module" src="main.js"></script>

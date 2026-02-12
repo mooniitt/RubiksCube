@@ -3,6 +3,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { CameraManager } from './cameraData.js';
 import { SolverManager } from './solver.js';
+import { initI18n, t } from './i18n.js';
 
 // Configuration
 const CUBE_SIZE = 1;
@@ -69,6 +70,7 @@ let solutionMoves = [];
 let currentMoveIndex = 0;
 
 init();
+initI18n(); // Init translation
 // Initialize CameraManager with both callbacks: (onScan, onTrack)
 cameraManager = new CameraManager(onFaceScanned, onFaceDetected); 
 solverManager = new SolverManager();
@@ -124,10 +126,10 @@ function setupTeachingControls() {
         const text = document.getElementById('solution-text');
         
         if (solutionStr.includes("Error")) {
-            text.textContent = "无法求解，请检查颜色";
+            text.textContent = t('solve_error');
             text.style.color = "red";
         } else {
-            text.textContent = "还原步骤: " + solutionStr;
+            text.textContent = t('solve_steps') + solutionStr;
             text.style.color = "#4A90E2";
             solutionMoves = solutionStr.split(' ').filter(m => m.length > 0);
             currentMoveIndex = 0;
@@ -294,7 +296,7 @@ function setupOrientationSync() {
     row.className = 'control-row';
     row.innerHTML = `
         <label style="color:white; font-size:14px; display:flex; align-items:center; gap:5px; cursor:pointer;">
-            <input type="checkbox" id="sync-toggle"> 🔄 视角跟随 (实验性)
+            <input type="checkbox" id="sync-toggle"> <span data-i18n="sync_toggle">${t('sync_toggle')}</span>
         </label>
     `;
     parent.appendChild(row);
