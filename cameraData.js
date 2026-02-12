@@ -164,40 +164,6 @@ export class CameraManager {
         return this.classifyColor(r / count, g / count, b / count);
     }
 
-    analyzeFrame(width, height) {
-        // We assume the video is roughly centered directly on the 3x3 grid
-        // The grid is a square. We take 9 sample points.
-        
-        // Calculate crop size (assuming user centers the cube effectively in the square container)
-        // In CSS we display it as a square, object-fit cover. 
-        // Logic simplification: take 9 evenly spaced points from the center square of the image.
-        
-        const size = Math.min(width, height) * 0.8; // Use 80% of the center
-        const startX = (width - size) / 2;
-        const startY = (height - size) / 2;
-        const cellSize = size / 3;
-
-        const detectedColors = [];
-
-        for (let row = 0; row < 3; row++) {
-            for (let col = 0; col < 3; col++) {
-                // Sample center of each cell
-                const cx = Math.floor(startX + col * cellSize + cellSize / 2);
-                const cy = Math.floor(startY + row * cellSize + cellSize / 2);
-
-                const pixel = this.ctx.getImageData(cx, cy, 1, 1).data;
-                const r = pixel[0];
-                const g = pixel[1];
-                const b = pixel[2];
-
-                const color = this.classifyColor(r, g, b);
-                detectedColors.push(color);
-            }
-        }
-
-        console.log(`Scanned ${this.scanOrder[this.currentStage]}:`, detectedColors);
-        return detectedColors;
-    }
 
     classifyColor(r, g, b) {
         // Convert RGB to HSV

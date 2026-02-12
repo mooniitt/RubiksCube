@@ -4,6 +4,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { CameraManager } from './cameraData.js';
 import { SolverManager } from './solver.js';
 import { initI18n, t } from './i18n.js';
+import { ParticleSystem } from './particles.js';
 
 // Configuration
 const CUBE_SIZE = 1;
@@ -66,6 +67,7 @@ let cubeState = {
 
 let isAnimating = false;
 let solverManager;
+let particleSystem;
 let solutionMoves = [];
 let currentMoveIndex = 0;
 
@@ -74,6 +76,7 @@ initI18n(); // Init translation
 // Initialize CameraManager with both callbacks: (onScan, onTrack)
 cameraManager = new CameraManager(onFaceScanned, onFaceDetected); 
 solverManager = new SolverManager();
+particleSystem = new ParticleSystem(scene);
 setupTeachingControls();
 setupOrientationSync(); // Ensure this is called
 animate();
@@ -143,6 +146,13 @@ function setupTeachingControls() {
             rotateLayer(move, 500, () => {
                 currentMoveIndex++;
                 highlightMove(currentMoveIndex);
+                
+                // Check completion
+                if (currentMoveIndex >= solutionMoves.length) {
+                    particleSystem.explode(new THREE.Vector3(0, 0, 0), 0xFFD700, 200);
+                    particleSystem.explode(new THREE.Vector3(2, 2, 2), 0xFF0000, 150);
+                    particleSystem.explode(new THREE.Vector3(-2, -2, -2), 0x0000FF, 150);
+                }
             });
         }
     });
@@ -166,7 +176,13 @@ function setupTeachingControls() {
                 rotateLayer(move, 500, () => {
                     currentMoveIndex++;
                     highlightMove(currentMoveIndex);
-                    setTimeout(playNext, 200); 
+                    
+                    if (currentMoveIndex >= solutionMoves.length) {
+                        particleSystem.explode(new THREE.Vector3(0, 0, 0), 0xFFD700, 200);
+                        particleSystem.explode(new THREE.Vector3(2, 2, 0), 0x00FF00, 150);
+                    } else {
+                        setTimeout(playNext, 200); 
+                    }
                 });
             }
         };
@@ -576,5 +592,6 @@ function updateCameraAdaptive() {
 function animate() {
     requestAnimationFrame(animate);
     controls.update();
+    if (particleSystem) particleSystem.update(0.016);
     renderer.render(scene, camera);
 }
