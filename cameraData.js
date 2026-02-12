@@ -1,11 +1,13 @@
 export class CameraManager {
-    constructor(onColorDetected) {
+    constructor(onColorDetected, onFaceDetected) {
         this.video = document.getElementById('camera-feed');
         this.canvas = document.getElementById('camera-canvas');
         this.ctx = this.canvas.getContext('2d', { willReadFrequently: true });
         this.stream = null;
         this.isStreaming = false;
+        this.isTracking = false;
         this.onColorDetected = onColorDetected; // Callback when a face is scanned
+        this.onFaceDetected = onFaceDetected;   // Callback for orientation sync
 
         // Order of scanning: Front, Right, Back, Left, Top, Bottom
         this.scanOrder = ['front', 'right', 'back', 'left', 'top', 'bottom'];
@@ -107,6 +109,57 @@ export class CameraManager {
         // Move to next stage
         this.currentStage++;
         this.updateInstruction();
+    }
+
+    async startTracking() {
+        if (!this.stream) await this.startCamera();
+        
+        this.isTracking = true;
+        
+        const trackLoop = () => {
+            if (!this.isTracking || !this.isStreaming) return;
+
+            // Draw current frame to canvas (small is fine for center only)
+            // Use existing canvas
+            this.canvas.width = this.video.videoWidth;
+            this.canvas.height = this.video.videoHeight;
+            this.ctx.drawImage(this.video, 0, 0);
+
+            // Analysis
+            const centerColor = this.getCenterColor(this.canvas.width, this.canvas.height);
+            
+            // Debounce or smooth detection? 
+            // We'll emit every reliable detection
+            if (this.onFaceDetected && centerColor) {
+               this.onFaceDetected(centerColor);
+            }
+
+            requestAnimationFrame(trackLoop);
+        };
+        trackLoop();
+    }
+
+    stopTracking() {
+        this.isTracking = false;
+    }
+
+    getCenterColor(width, height) {
+        // Sample center area (averaging a small box for stability)
+        const cx = Math.floor(width / 2);
+        const cy = Math.floor(height / 2);
+        const sampleSize = 10;
+        
+        let r = 0, g = 0, b = 0;
+        const data = this.ctx.getImageData(cx - 5, cy - 5, 10, 10).data;
+        
+        for(let i=0; i<data.length; i+=4) {
+            r += data[i];
+            g += data[i+1];
+            b += data[i+2];
+        }
+        
+        const count = data.length / 4;
+        return this.classifyColor(r / count, g / count, b / count);
     }
 
     analyzeFrame(width, height) {

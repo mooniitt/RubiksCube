@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>3D Rubik's Cube - Three.js</title>
+    <title>3D Rubik's Cube</title>
     <link rel="stylesheet" href="style.css" />
     <script type="importmap">
       {
@@ -29,6 +29,18 @@
         <div id="camera-controls">
             <button id="scan-btn">扫描当前面 (F)</button>
             <div id="instruction">请扫描 Front (前) 面</div>
+        </div>
+    </div>
+
+    <div id="teaching-controls" class="hidden">
+        <div class="control-row">
+            <button id="solve-btn" class="primary-btn">🧠 计算还原步骤</button>
+            <span id="solution-text"></span>
+        </div>
+        <div class="control-row" id="step-controls" style="display:none;">
+            <button id="prev-btn">⏮ 上一步</button>
+            <button id="play-btn">▶ 播放</button>
+            <button id="next-btn">下一步 ⏭</button>
         </div>
     </div>
 

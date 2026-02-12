@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { CameraManager } from './cameraData.js';
+import { SolverManager } from './solver.js';
 
 // Configuration
 const CUBE_SIZE = 1;
@@ -23,8 +24,7 @@ const COLOR_MAP = {
     'orange': 0xFF5900
 };
 
-// Default stickers state (Standard solved state)
-// Each face has 9 stickers. Order: Top-left to Bottom-right reading.
+// State
 let cubeState = {
     'front': Array(9).fill('red'),
     'back': Array(9).fill('orange'),
@@ -34,8 +34,15 @@ let cubeState = {
     'bottom': Array(9).fill('yellow')
 };
 
+let isAnimating = false;
+let solverManager;
+let solutionMoves = [];
+let currentMoveIndex = 0;
+
 init();
-new CameraManager(onFaceScanned); // Initialize Camera Logic
+new CameraManager(onFaceScanned); 
+solverManager = new SolverManager();
+setupTeachingControls();
 animate();
 
 function onFaceScanned(faceName, colors) {
@@ -45,6 +52,300 @@ function onFaceScanned(faceName, colors) {
     }
 }
 
+function setupTeachingControls() {
+    const solveBtn = document.getElementById('solve-btn');
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const playBtn = document.getElementById('play-btn');
+    const controlsDiv = document.getElementById('teaching-controls'); // Initially hidden? No, css handles it.
+    
+    // Show controls when camera is toggled? Or always?
+    // Let's make sure it's visible.
+    document.getElementById('teaching-controls').classList.remove('hidden');
+
+    solveBtn.addEventListener('click', () => {
+        const solution = solverManager.solve(cubeState);
+        const text = document.getElementById('solution-text');
+        
+        if (solution.includes("Error")) {
+            text.textContent = "无法求解，请检查颜色录入是否正确";
+            text.style.color = "red";
+        } else {
+            text.textContent = solution;
+            text.style.color = "#4A90E2";
+            solutionMoves = solution.split(' ').filter(m => m.length > 0);
+            currentMoveIndex = 0;
+            document.getElementById('step-controls').style.display = 'flex';
+        }
+    });
+
+    nextBtn.addEventListener('click', () => {
+        if (currentMoveIndex < solutionMoves.length && !isAnimating) {
+            const move = solutionMoves[currentMoveIndex];
+            rotateLayer(move, () => {
+                currentMoveIndex++;
+                highlightMove(currentMoveIndex);
+            });
+        }
+    });
+
+    prevBtn.addEventListener('click', () => {
+        if (currentMoveIndex > 0 && !isAnimating) {
+            currentMoveIndex--;
+            const move = solutionMoves[currentMoveIndex];
+            const inverseMove = getInverseMove(move);
+            rotateLayer(inverseMove, () => {
+                highlightMove(currentMoveIndex);
+            });
+        }
+    });
+
+    // Simple auto-play
+    playBtn.addEventListener('click', () => {
+        const playNext = () => {
+            if (currentMoveIndex < solutionMoves.length) {
+                const move = solutionMoves[currentMoveIndex];
+                rotateLayer(move, () => {
+                    currentMoveIndex++;
+                    highlightMove(currentMoveIndex);
+                    setTimeout(playNext, 500); 
+                });
+            }
+        };
+        playNext();
+    });
+}
+
+function highlightMove(index) {
+    // Optional: Highlight current move in UI text
+}
+
+function getInverseMove(move) {
+    if (move.includes("'")) return move.replace("'", "");
+    if (move.includes("2")) return move; // 180 is its own inverse
+    return move + "'";
+}
+
+// Axis: 'x', 'y', 'z'
+// Value: -1, 0, 1 (coordinate)
+// Direction: 1 (clockwise), -1 (counter-clockwise)
+function rotateLayer(move, callback) {
+    if (isAnimating) return;
+    isAnimating = true;
+
+    // Parse move string "U", "U'", "U2", etc.
+    // U (Top): y=1, axis y, dir -1 (Wait, standard notation check)
+    // Standard: Right-handed rule. Thumb points axis positive. Fingers curl.
+    // U: Up face clockwise. Axis Y. Positive Y is Up. 
+    // D: Down face cw. Axis Y. Negative Y is Down.
+    // R: Right face cw. Axis X.
+    // L: Left face cw. Axis X.
+    // F: Front face cw. Axis Z.
+    // B: Back face cw. Axis Z.
+
+    let char = move[0];
+    let suffix = move.substring(1);
+    let angle = Math.PI / 2; // 90 deg
+    
+    if (suffix === "'") angle = -Math.PI / 2;
+    if (suffix === "2") angle = Math.PI;
+
+    let axisVec = new THREE.Vector3();
+    let filter = null;
+    let groupToRotate = new THREE.Group();
+    
+    // We attach objects to a temporary group, rotate the group, then detach.
+    // Detach preserves world transforms. Then we must update logical coords.
+    
+    // Select cubies based on move
+    // Note: Our coordinates are x: -1..1, y: -1..1, z: -1..1
+    
+    let selection = [];
+
+    switch(char) {
+        case 'U': // Top y=1
+            axisVec.set(0, 1, 0);
+            selection = cubies.filter(c => Math.abs(c.position.y - (CUBE_SIZE + SPACING)) < 0.1);
+            angle *= -1; // Three.js Y-up vs Standard notation? Let's test.
+            // Standard U looks down from top, clockwise.
+            // ThreeJS rotation around +Y is CCW? 
+            break;
+        case 'D': // Bottom y=-1
+            axisVec.set(0, 1, 0);
+            selection = cubies.filter(c => Math.abs(c.position.y - (-CUBE_SIZE - SPACING)) < 0.1);
+            angle *= 1; // Looking from bottom?
+            break;
+        case 'R': // Right x=1
+            axisVec.set(1, 0, 0);
+            selection = cubies.filter(c => Math.abs(c.position.x - (CUBE_SIZE + SPACING)) < 0.1);
+            angle *= -1; 
+            break;
+        case 'L': // Left x=-1
+            axisVec.set(1, 0, 0);
+            selection = cubies.filter(c => Math.abs(c.position.x - (-CUBE_SIZE - SPACING)) < 0.1);
+            angle *= 1;
+            break;
+        case 'F': // Front z=1
+            axisVec.set(0, 0, 1);
+            selection = cubies.filter(c => Math.abs(c.position.z - (CUBE_SIZE + SPACING)) < 0.1);
+            angle *= -1;
+            break;
+        case 'B': // Back z=-1
+            axisVec.set(0, 0, 1);
+            selection = cubies.filter(c => Math.abs(c.position.z - (-CUBE_SIZE - SPACING)) < 0.1);
+            angle *= 1;
+            break;
+    }
+
+    // Add to group
+    scene.add(groupToRotate);
+    // groupToRotate.position.set(0,0,0); // Default
+    
+    // Parent change dance
+    selection.forEach(c => {
+        groupToRotate.attach(c); // Attach preserves world transform
+    });
+
+    // Animate
+    const startObj = { t: 0 };
+    const endObj = { t: 1 };
+    
+    // Simple interpolation loop without TWEEN lib for deps
+    const startTime = Date.now();
+    const duration = 300; // ms
+
+    const animateRotation = () => {
+        const now = Date.now();
+        const progress = Math.min((now - startTime) / duration, 1);
+        // Easing? Linear for now.
+        
+        groupToRotate.quaternion.setFromAxisAngle(axisVec, angle * progress);
+
+        if (progress < 1) {
+            requestAnimationFrame(animateRotation);
+        } else {
+            // Done
+            // Detach to bake transform back to world
+            selection.forEach(c => {
+                scene.attach(c);
+                
+                // Snap position and rotation to nearest safe values to prevent drift
+                c.position.x = Math.round(c.position.x * 10) / 10;
+                c.position.y = Math.round(c.position.y * 10) / 10;
+                c.position.z = Math.round(c.position.z * 10) / 10;
+                
+                c.updateMatrixWorld();
+            });
+            scene.remove(groupToRotate);
+            isAnimating = false;
+            if (callback) callback();
+        }
+    };
+    animateRotation();
+}
+
+// Face Orientation Sync
+let lastDetectedColor = null;
+let syncEnabled = false;
+
+function setupOrientationSync() {
+    const parent = document.getElementById('teaching-controls');
+    
+    // Check if toggle already exists (in case of re-run)
+    if (document.getElementById('sync-toggle')) return;
+
+    const row = document.createElement('div');
+    row.className = 'control-row';
+    row.innerHTML = `
+        <label style="color:white; font-size:14px; display:flex; align-items:center; gap:5px; cursor:pointer;">
+            <input type="checkbox" id="sync-toggle"> 🔄 视角跟随 (实验性)
+        </label>
+    `;
+    parent.appendChild(row);
+
+    document.getElementById('sync-toggle').addEventListener('change', (e) => {
+        syncEnabled = e.target.checked;
+        if (syncEnabled) {
+            cameraManager.startTracking();
+        } else {
+            cameraManager.stopTracking();
+        }
+    });
+}
+
+// Camera Position Targets for each face color
+const FACE_POSITIONS = {
+    'red': { pos: [6, 4, 6], lookAt: [0, 0, 0] },     // Front (Typical start pos)
+    'orange': { pos: [-6, 4, -6], lookAt: [0, 0, 0] },// Back
+    'blue': { pos: [6, 4, -6], lookAt: [0, 0, 0] },   // Right ?? Wait, Right is +x. 
+    // Let's debug positions:
+    // Front(Red) is +z. Camera at (x,y,z) looking at 0.
+    // Right(Blue) is +x. Camera should be at (+x, +y, 0).
+    // Left(Green) is -x. Camera at (-x, +y, 0).
+    // Back(Orange) is -z. Camera at (0, +y, -z).
+    // Top(White) is +y. Camera at (0, +y, 0).
+    // Bottom(Yellow) is -y.
+};
+
+// Refined positions
+// Assuming Camera orbits around 0,0,0 at radius ~8
+const RADIUS_CAM = 8;
+const CAM_Y = 5;
+
+const FACE_ANGLES = {
+    'red': { x: 0, z: RADIUS_CAM },       // Front
+    'orange': { x: 0, z: -RADIUS_CAM },   // Back
+    'blue': { x: RADIUS_CAM, z: 0 },      // Right
+    'green': { x: -RADIUS_CAM, z: 0 },    // Left
+    'white': { x: 0, z: 0, y: RADIUS_CAM }, // Top (Special handling)
+    'yellow': { x: 0, z: 0, y: -RADIUS_CAM } // Bottom
+};
+
+let currentFace = 'red';
+
+function onFaceDetected(color) {
+    if (!syncEnabled || color === currentFace) return;
+    
+    // Debounce: verify color stability if needed, but for now direct switch
+    // Only switch if it's a valid face color
+    if (!FACE_ANGLES[color]) return;
+    
+    console.log("Syncing to face:", color);
+    currentFace = color;
+    
+    const target = FACE_ANGLES[color];
+    
+    // Smoothly animate camera position
+    // We can use a simple generic interpolation variable
+    const startPos = camera.position.clone();
+    
+    let endPos;
+    if (color === 'white') endPos = new THREE.Vector3(0.1, RADIUS_CAM, 0); // Slight offset to avoid Gimbal lock
+    else if (color === 'yellow') endPos = new THREE.Vector3(0.1, -RADIUS_CAM, 0);
+    else endPos = new THREE.Vector3(target.x, CAM_Y, target.z);
+
+    // Simple tween
+    let t = 0;
+    const duration = 500;
+    const startTime = Date.now();
+
+    const animateCam = () => {
+        if (currentFace !== color) return; // Interrupted
+        
+        const now = Date.now();
+        t = Math.min((now - startTime) / duration, 1);
+        
+        // Spherical lerp (slerp) is better for orbit, but lerp is okay for small adjustments
+        camera.position.lerpVectors(startPos, endPos, t);
+        camera.lookAt(0, 0, 0);
+        
+        if (t < 1) requestAnimationFrame(animateCam);
+    };
+    animateCam();
+}
+
+let cameraManager; // Move scope out
+
 function init() {
     // Scene
     scene = new THREE.Scene();
@@ -52,7 +353,7 @@ function init() {
 
     // Camera
     camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
-    camera.position.set(6, 4, 6);
+    camera.position.set(FACE_ANGLES.red.x, CAM_Y, FACE_ANGLES.red.z); // Start at Front
     camera.lookAt(0, 0, 0);
 
     // Renderer
