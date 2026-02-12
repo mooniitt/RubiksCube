@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="zh-CN">
-  <head>
+
+<head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>3D Rubik's Cube Pro</title>
@@ -9,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-    
+
     <script type="importmap">
       {
         "imports": {
@@ -18,22 +19,17 @@
         }
       }
     </script>
-  </head>
-  <body>
+</head>
+
+<body>
     <!-- 3D Canvas Container -->
     <div id="container"></div>
 
     <!-- UI Overlay container (Pointer events managed in CSS) -->
     <div id="ui-container">
         <!-- Top Bar -->
-        <header class="top-bar glass-panel">
-            <h1 data-i18n="app_title">Rubik's 3D Pro</h1>
-            <div class="actions">
-                <button id="toggle-camera-btn" class="btn-icon" aria-label="Toggle Camera">
-                    <span data-i18n="toggle_camera">📷 AR 同步</span>
-                </button>
-            </div>
-        </header>
+        <!-- Floating Title -->
+        <h1 id="app-title" data-i18n="app_title">Rubik's 3D Pro</h1>
 
         <!-- Camera Interface (Hidden by default) -->
         <div id="camera-container" class="glass-panel hidden">
@@ -41,18 +37,24 @@
                 <h3 data-i18n="scan_header">色彩扫描</h3>
                 <button id="close-camera" class="btn-text">✕</button>
             </div>
-            
+
             <div class="camera-viewport">
                 <video id="camera-feed" autoplay playsinline></video>
                 <canvas id="camera-canvas" class="hidden"></canvas>
                 <div id="grid-overlay">
                     <!-- 3x3 Grid -->
-                    <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
-                    <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
-                    <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
+                    <div class="grid-cell"></div>
+                    <div class="grid-cell"></div>
+                    <div class="grid-cell"></div>
+                    <div class="grid-cell"></div>
+                    <div class="grid-cell"></div>
+                    <div class="grid-cell"></div>
+                    <div class="grid-cell"></div>
+                    <div class="grid-cell"></div>
+                    <div class="grid-cell"></div>
                 </div>
             </div>
-            
+
             <div id="camera-controls">
                 <div id="instruction" data-i18n="instruction_front">请对准 F (前)</div>
                 <button id="scan-btn" class="btn-primary-small" data-i18n="start_scan">开始扫描</button>
@@ -63,21 +65,24 @@
         <div id="bottom-panel">
             <!-- Teaching Controls (Contextual) -->
             <div id="teaching-controls" class="glass-panel hidden">
-                 <!-- Sync Toggle placeholder, inserted by JS -->
-                 
-                 <div class="control-group">
+                <!-- Sync Toggle placeholder, inserted by JS -->
+
+                <div class="control-group">
+                    <button id="toggle-camera-btn" class="btn-secondary" aria-label="Toggle Camera">
+                        <span data-i18n="toggle_camera">📷</span>
+                    </button>
                     <button id="scramble-btn" class="btn-secondary" data-i18n="scramble_btn">🔀 随机打乱</button>
                     <button id="solve-btn" class="btn-primary" data-i18n="solve_btn">🧠 还原求解</button>
-                 </div>
+                </div>
 
-                 <div id="solution-display" class="hidden">
+                <div id="solution-display" class="hidden">
                     <div id="solution-text"></div>
                     <div id="step-controls">
                         <button id="prev-btn" class="btn-icon">⏮</button>
                         <button id="play-btn" class="btn-icon">▶</button>
                         <button id="next-btn" class="btn-icon">⏭</button>
                     </div>
-                 </div>
+                </div>
             </div>
         </div>
     </div>
@@ -88,16 +93,18 @@
         <p data-i18n="loading">Loading 3D Engine...</p>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/gh/cs0x7f/min2phase.js@master/min2phase.js"></script>
     <script type="module" src="main.js"></script>
     <script>
         // Simple logic to close camera UI from X button
         document.getElementById('close-camera').addEventListener('click', () => {
-             // Logic handled by CameraManager usually, but we can force toggle here or let JS handle
-             // We'll let CameraManager's toggle logic handle it if accessible, 
-             // but for now main.js handles the toggle button. 
-             // We will wire this up in code later or just simulate a click on toggle.
-             document.getElementById('toggle-camera-btn').click();
+            // Logic handled by CameraManager usually, but we can force toggle here or let JS handle
+            // We'll let CameraManager's toggle logic handle it if accessible, 
+            // but for now main.js handles the toggle button. 
+            // We will wire this up in code later or just simulate a click on toggle.
+            document.getElementById('toggle-camera-btn').click();
         });
     </script>
-  </body>
+</body>
+
 </html>

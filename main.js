@@ -8,15 +8,15 @@ import { ParticleSystem } from './particles.js';
 
 // Configuration
 const CUBE_SIZE = 1;
-const SPACING = 0.08; 
-const RADIUS = 0.1;   
-const SMOOTHNESS = 4; 
+const SPACING = 0.08;
+const RADIUS = 0.1;
+const SMOOTHNESS = 4;
 
 // Global variables
 let camera, scene, renderer, controls;
 let cameraManager; // Global reference
-const cubies = []; 
-const group = new THREE.Group(); 
+const cubies = [];
+const group = new THREE.Group();
 // Map logical colors (string) to Hex
 const COLOR_MAP = {
     'blue': 0x0045AD,
@@ -43,15 +43,15 @@ function getFaceTarget(face, radius = targetRadius) {
         'white': { x: 0, z: 0, y: 1 }, // Top (Special)
         'yellow': { x: 0, z: 0, y: -1 } // Bottom (Special)
     };
-    
+
     if (!dirs[face]) return null;
     const d = dirs[face];
-    
+
     if (face === 'white' || face === 'yellow') {
         const offset = 0.1; // Avoid Gimbal lock
         return new THREE.Vector3(offset, d.y * radius, offset);
     }
-    
+
     return new THREE.Vector3(d.x * radius, CAM_Y, d.z * radius);
 }
 
@@ -74,7 +74,7 @@ let currentMoveIndex = 0;
 init();
 initI18n(); // Init translation
 // Initialize CameraManager with both callbacks: (onScan, onTrack)
-cameraManager = new CameraManager(onFaceScanned, onFaceDetected); 
+cameraManager = new CameraManager(onFaceScanned, onFaceDetected);
 solverManager = new SolverManager();
 particleSystem = new ParticleSystem(scene);
 setupTeachingControls();
@@ -98,13 +98,13 @@ function setupTeachingControls() {
     const nextBtn = document.getElementById('next-btn');
     const playBtn = document.getElementById('play-btn');
     const controlsDiv = document.getElementById('teaching-controls');
-    
+
     document.getElementById('teaching-controls').classList.remove('hidden');
 
     scrambleBtn.addEventListener('click', () => {
-        if(isAnimating) return;
+        if (isAnimating) return;
         scrambleCube();
-        
+
         // Reset solution UI
         document.getElementById('solution-text').textContent = "";
         document.getElementById('step-controls').style.display = 'none';
@@ -112,30 +112,48 @@ function setupTeachingControls() {
     });
 
     solveBtn.addEventListener('click', () => {
-        // Strategy: If we have a scramble history, use it (Reverse).
-        // Otherwise, use solverManager (Mock/Camera).
-        
+        // Strategy: Use min2phase for everything to ensure state is correct.
+        // If we have history, we can reconstruction the state from it.
+
         let solutionStr = "";
-        
+
         if (moveHistory.length > 0) {
-            console.log("Using Move History for Solution", moveHistory);
-            // Reverse the history
-            const reversed = [...moveHistory].reverse().map(m => getInverseMove(m));
-            solutionStr = reversed.join(" ");
+            console.log("Reconstructing state from history:", moveHistory);
+            const scrambleStr = moveHistory.join(" ");
+            // Use fromScramble to get facelets, then solve
+            const facelets = solverManager.fromScramble(scrambleStr);
+            if (facelets) {
+                solutionStr = min2phase.solve(facelets);
+            } else {
+                console.error("Failed to reconstruction state from history");
+                solutionStr = "Error: State Reconstruction Failed";
+            }
         } else {
             solutionStr = solverManager.solve(cubeState);
         }
 
         const text = document.getElementById('solution-text');
-        
+        const solutionDisplay = document.getElementById('solution-display');
+
         if (solutionStr.includes("Error")) {
             text.textContent = t('solve_error');
             text.style.color = "red";
+            solutionDisplay.classList.remove('hidden');
         } else {
             text.textContent = t('solve_steps') + solutionStr;
             text.style.color = "#4A90E2";
             solutionMoves = solutionStr.split(' ').filter(m => m.length > 0);
             currentMoveIndex = 0;
+
+            // Clear history so we don't re-solve old state next time
+            // But wait, if user wants to re-play? 
+            // We should clear history ONLY when solve is FULLY PLAYED out?
+            // Or just clear it now because we have the solution. 
+            // The issue is if they hit "Solve" again, it uses old history.
+            moveHistory = [];
+
+            // Show the solution UI
+            solutionDisplay.classList.remove('hidden');
             document.getElementById('step-controls').style.display = 'flex';
         }
     });
@@ -146,7 +164,7 @@ function setupTeachingControls() {
             rotateLayer(move, 500, () => {
                 currentMoveIndex++;
                 highlightMove(currentMoveIndex);
-                
+
                 // Check completion
                 if (currentMoveIndex >= solutionMoves.length) {
                     particleSystem.explode(new THREE.Vector3(0, 0, 0), 0xFFD700, 200);
@@ -176,12 +194,12 @@ function setupTeachingControls() {
                 rotateLayer(move, 500, () => {
                     currentMoveIndex++;
                     highlightMove(currentMoveIndex);
-                    
+
                     if (currentMoveIndex >= solutionMoves.length) {
                         particleSystem.explode(new THREE.Vector3(0, 0, 0), 0xFFD700, 200);
                         particleSystem.explode(new THREE.Vector3(2, 2, 0), 0x00FF00, 150);
                     } else {
-                        setTimeout(playNext, 200); 
+                        setTimeout(playNext, 200);
                     }
                 });
             }
@@ -194,15 +212,15 @@ function scrambleCube() {
     const moves = ['U', 'D', 'L', 'R', 'F', 'B'];
     const count = 20;
     const scrambleSeq = [];
-    
-    for(let i=0; i<count; i++) {
+
+    for (let i = 0; i < count; i++) {
         const m = moves[Math.floor(Math.random() * moves.length)];
         const suffix = Math.random() < 0.5 ? "'" : (Math.random() < 0.2 ? "2" : "");
         scrambleSeq.push(m + suffix);
     }
-    
+
     console.log("Scramble:", scrambleSeq.join(" "));
-    
+
     let i = 0;
     const nextMove = () => {
         if (i >= scrambleSeq.length) return;
@@ -233,8 +251,8 @@ function rotateLayer(move, duration = 300, callback, isScramble = false) {
     // ... (parsing char, angle logic is same)
     let char = move[0];
     let suffix = move.substring(1);
-    let angle = Math.PI / 2; 
-    
+    let angle = Math.PI / 2;
+
     if (suffix === "'") angle = -Math.PI / 2;
     if (suffix === "2") angle = Math.PI;
 
@@ -242,7 +260,7 @@ function rotateLayer(move, duration = 300, callback, isScramble = false) {
     let groupToRotate = new THREE.Group();
     let selection = [];
 
-    switch(char) {
+    switch (char) {
         case 'U': axisVec.set(0, 1, 0); selection = cubies.filter(c => Math.abs(c.position.y - (CUBE_SIZE + SPACING)) < 0.1); angle *= -1; break;
         case 'D': axisVec.set(0, 1, 0); selection = cubies.filter(c => Math.abs(c.position.y - (-CUBE_SIZE - SPACING)) < 0.1); angle *= 1; break;
         case 'R': axisVec.set(1, 0, 0); selection = cubies.filter(c => Math.abs(c.position.x - (CUBE_SIZE + SPACING)) < 0.1); angle *= -1; break;
@@ -255,12 +273,18 @@ function rotateLayer(move, duration = 300, callback, isScramble = false) {
     selection.forEach(c => groupToRotate.attach(c));
 
     const startTime = Date.now();
-    
+
+    // Easing function: easeInOutCubic
+    const ease = (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
     const animateRotation = () => {
         const now = Date.now();
-        const progress = Math.min((now - startTime) / duration, 1);
-        
-        groupToRotate.quaternion.setFromAxisAngle(axisVec, angle * progress);
+        let progress = Math.min((now - startTime) / duration, 1);
+
+        // Apply easing
+        const easedProgress = ease(progress);
+
+        groupToRotate.quaternion.setFromAxisAngle(axisVec, angle * easedProgress);
 
         if (progress < 1) {
             requestAnimationFrame(animateRotation);
@@ -274,7 +298,7 @@ function rotateLayer(move, duration = 300, callback, isScramble = false) {
             });
             scene.remove(groupToRotate);
             isAnimating = false;
-            
+
             // Track history if it's a scramble or manual move (not part of solution playback)
             // Ideally we track EVERYTHING that changes state.
             // But if we are Playing the Solution, we are "Undoing" the history technically?
@@ -282,7 +306,7 @@ function rotateLayer(move, duration = 300, callback, isScramble = false) {
             // - If Scramble: Add to history.
             // - If User click (TODO): Add to history.
             // - If Solve Playback: Do NOT add to history (or treat as consuming history).
-            
+
             if (isScramble) {
                 moveHistory.push(move);
             } else {
@@ -304,7 +328,7 @@ let syncEnabled = false;
 
 function setupOrientationSync() {
     const parent = document.getElementById('teaching-controls');
-    
+
     // Check if toggle already exists (in case of re-run)
     if (document.getElementById('sync-toggle')) return;
 
@@ -334,16 +358,16 @@ let currentFace = 'red';
 
 function onFaceDetected(color) {
     if (!syncEnabled || color === currentFace) return;
-    
+
     // Debounce: verify color stability if needed, but for now direct switch
     // Only switch if it's a valid face color
     // Only switch if it's a valid face color
     const targetVec = getFaceTarget(color);
     if (!targetVec) return;
-    
+
     console.log("Syncing to face:", color);
     currentFace = color;
-    
+
     // Smoothly animate camera position
     // We can use a simple generic interpolation variable
     const startPos = camera.position.clone();
@@ -356,14 +380,14 @@ function onFaceDetected(color) {
 
     const animateCam = () => {
         if (currentFace !== color) return; // Interrupted
-        
+
         const now = Date.now();
         t = Math.min((now - startTime) / duration, 1);
-        
+
         // Spherical lerp (slerp) is better for orbit, but lerp is okay for small adjustments
         camera.position.lerpVectors(startPos, endPos, t);
         camera.lookAt(0, 0, 0);
-        
+
         if (t < 1) requestAnimationFrame(animateCam);
     };
     animateCam();
@@ -374,13 +398,13 @@ function onFaceDetected(color) {
 function init() {
     // Scene
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x333333); 
+    scene.background = new THREE.Color(0x333333);
 
     // Camera
     camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
     updateCameraAdaptive(); // Calc initial radius
     const startPos = getFaceTarget('red', targetRadius);
-    camera.position.set(startPos.x, startPos.y, startPos.z); 
+    camera.position.set(startPos.x, startPos.y, startPos.z);
     camera.lookAt(0, 0, 0);
 
     // Renderer
@@ -410,7 +434,7 @@ function init() {
     controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
-    controls.autoRotate = true; 
+    controls.autoRotate = true;
     controls.autoRotateSpeed = 0.5;
 
     // Create Rubik's Cube
@@ -434,12 +458,12 @@ function createRubiksCube() {
     // x: -1 (left), 0, 1 (right)
     // y: -1 (bottom), 0, 1 (top)
     // z: -1 (back), 0, 1 (front)
-    
+
     for (let y = 1; y >= -1; y--) {
         for (let z = 1; z >= -1; z--) { // Start from Front
             for (let x = -1; x <= 1; x++) {
                 const cubie = new THREE.Mesh(geometry, [
-                    baseMaterial, baseMaterial, baseMaterial, 
+                    baseMaterial, baseMaterial, baseMaterial,
                     baseMaterial, baseMaterial, baseMaterial
                 ]); // Init with base (will be colored by updateCubeColors)
 
@@ -448,23 +472,23 @@ function createRubiksCube() {
                     y * (CUBE_SIZE + SPACING),
                     z * (CUBE_SIZE + SPACING)
                 );
-                
+
                 cubie.castShadow = true;
                 cubie.receiveShadow = true;
                 cubie.userData = { x, y, z }; // logical position
-                
+
                 group.add(cubie);
                 cubies.push(cubie);
             }
         }
     }
-    
+
     updateCubeColors();
 }
 
 function updateCubeColors() {
     // Generate materials based on current cubeState
-    
+
     // Helper to get color hex
     const getMat = (colorName) => new THREE.MeshStandardMaterial({
         color: COLOR_MAP[colorName] || 0x333333,
@@ -477,10 +501,10 @@ function updateCubeColors() {
 
     cubies.forEach(cubie => {
         const { x, y, z } = cubie.userData;
-        
+
         // Material Indexes:
         // 0: Right (+x), 1: Left (-x), 2: Top (+y), 3: Bottom (-y), 4: Front (+z), 5: Back (-z)
-        
+
         const materials = [baseMat, baseMat, baseMat, baseMat, baseMat, baseMat];
 
         // Mapping logical 3x3 grid to linear index 0-8
@@ -497,8 +521,8 @@ function updateCubeColors() {
             // Right face view: z is Left-Right axis? No.
             // When looking at Right face:
             // Top row (y=1): Front(z=1) -> Back(z=-1). Index 0,1,2
-            const row = 1 - y; 
-            const col = 1 - z; 
+            const row = 1 - y;
+            const col = 1 - z;
             const idx = row * 3 + col;
             materials[0] = getMat(cubeState.right[idx]);
         }
@@ -562,7 +586,7 @@ function onWindowResize() {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
-    
+
     updateCameraAdaptive();
 }
 
@@ -571,19 +595,19 @@ function updateCameraAdaptive() {
     // If aspect < 1 (portrait), we need to distance the camera to fit horizontal width
     const aspect = camera.aspect;
     if (aspect < 1) {
-        targetRadius = BASE_RADIUS / aspect; 
+        targetRadius = BASE_RADIUS / aspect;
     } else {
         targetRadius = BASE_RADIUS;
     }
-    
+
     // Smoothly move camera if needed? Or just jump.
     // For specific views (Face Sync), we should respect current face.
     // But if user is orbit controlling, we shouldn't force jump.
     // We only update the sync target variables.
-    
+
     // If NOT interacting and aligned to a face, maybe update?
     // Let's just update the targetRadius state. The next sync or frame will use it.
-    
+
     // Force update visual if we are in a "nice" view?
     // Let's just update controls.minDistance/max if needed.
     // controls.maxDistance = targetRadius * 2;

@@ -1,16 +1,20 @@
 :root {
-    --primary: #4A90E2;
-    --primary-hover: #357ABD;
-    --secondary: rgba(255, 255, 255, 0.15);
-    --secondary-hover: rgba(255, 255, 255, 0.25);
+    --primary: #007AFF;
+    /* Apple Blue */
+    --primary-hover: #0056b3;
+    --secondary: rgba(255, 255, 255, 0.1);
+    --secondary-hover: rgba(255, 255, 255, 0.2);
     --text: #ffffff;
-    --text-muted: rgba(255, 255, 255, 0.7);
-    --glass-bg: rgba(20, 20, 20, 0.65);
-    --glass-border: rgba(255, 255, 255, 0.1);
-    --radius-lg: 16px;
-    --radius-md: 12px;
+    --text-muted: rgba(235, 235, 245, 0.6);
+    /* Apple muted text */
+    --glass-bg: rgba(30, 30, 30, 0.75);
+    --glass-border: rgba(255, 255, 255, 0.15);
+    --radius-lg: 24px;
+    /* Larger radius for panels */
+    --radius-md: 14px;
     --radius-sm: 8px;
     --safe-area-bottom: env(safe-area-inset-bottom, 20px);
+    --font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
 }
 
 * {
@@ -21,8 +25,8 @@
 body {
     margin: 0;
     overflow: hidden;
-    background-color: #111;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: #000;
+    font-family: var(--font-family);
     color: var(--text);
 }
 
@@ -44,7 +48,8 @@ body {
     width: 100%;
     height: 100%;
     z-index: 10;
-    pointer-events: none; /* Let clicks pass through to 3D */
+    pointer-events: none;
+    /* Let clicks pass through to 3D */
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -53,12 +58,13 @@ body {
 /* Glass Panel Utility */
 .glass-panel {
     background: var(--glass-bg);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(25px) saturate(180%);
+    -webkit-backdrop-filter: blur(25px) saturate(180%);
     border: 1px solid var(--glass-border);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-    pointer-events: auto; /* Re-enable clicks */
-    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s ease;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    pointer-events: auto;
+    /* Re-enable clicks */
+    transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.4s ease;
 }
 
 .hidden {
@@ -67,26 +73,22 @@ body {
     transform: translateY(20px) scale(0.95);
 }
 
-/* Top Bar */
-.top-bar {
-    width: 100%;
-    padding: 12px 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid var(--glass-border);
-    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
-    /* Mobile: slim */
-}
-
-.top-bar h1 {
-    font-size: 18px;
-    font-weight: 600;
+/* Floating Title */
+#app-title {
+    position: absolute;
+    top: max(20px, env(safe-area-inset-top));
+    left: 24px;
+    font-size: 24px;
+    font-weight: 700;
     margin: 0;
     letter-spacing: -0.02em;
     background: linear-gradient(to right, #fff, #aaa);
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
+    z-index: 10;
+    pointer-events: none;
+    text-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 /* Buttons */
@@ -103,12 +105,18 @@ button {
 }
 
 .btn-icon {
-    background: var(--secondary);
+    background: rgba(255, 255, 255, 0.08);
     color: var(--text);
-    padding: 8px 12px;
-    border-radius: var(--radius-md);
-    font-size: 14px;
-    border: 1px solid var(--glass-border);
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    /* Circular */
+    font-size: 16px;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
 }
 
 .btn-icon:hover {
@@ -119,27 +127,31 @@ button {
 .btn-primary {
     background: var(--primary);
     color: white;
-    padding: 12px 24px;
-    border-radius: var(--radius-lg);
-    font-weight: 600;
-    font-size: 16px;
-    box-shadow: 0 4px 12px rgba(74, 144, 226, 0.3);
+    padding: 14px 28px;
+    border-radius: 999px;
+    /* Pill */
+    font-weight: 500;
+    font-size: 17px;
+    box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+    letter-spacing: -0.01em;
 }
 
 .btn-primary:hover {
     background: var(--primary-hover);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(74, 144, 226, 0.4);
+    transform: scale(1.02);
+    box-shadow: 0 6px 16px rgba(0, 122, 255, 0.4);
 }
 
 .btn-secondary {
-    background: var(--secondary);
+    background: rgba(255, 255, 255, 0.12);
     color: var(--text);
-    padding: 12px 20px;
-    border-radius: var(--radius-lg);
+    padding: 14px 24px;
+    border-radius: 999px;
+    /* Pill */
     font-weight: 500;
-    font-size: 15px;
-    border: 1px solid var(--glass-border);
+    font-size: 16px;
+    border: none;
+    backdrop-filter: blur(10px);
 }
 
 .btn-secondary:hover {
@@ -152,7 +164,10 @@ button {
     padding: 4px;
     font-size: 18px;
 }
-.btn-text:hover { color: var(--text); }
+
+.btn-text:hover {
+    color: var(--text);
+}
 
 .btn-primary-small {
     background: var(--primary);
@@ -165,7 +180,8 @@ button {
 /* Camera Container */
 #camera-container {
     position: absolute;
-    top: 70px;
+    top: 60px;
+    /* Moved up slightly from 70px */
     right: 20px;
     width: 280px;
     border-radius: var(--radius-lg);
@@ -174,19 +190,27 @@ button {
     overflow: hidden;
 }
 
+
+
 .camera-header {
     padding: 10px 16px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: rgba(0,0,0,0.2);
+    background: rgba(0, 0, 0, 0.2);
 }
-.camera-header h3 { margin: 0; font-size: 14px; font-weight: 500; }
+
+.camera-header h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+}
 
 .camera-viewport {
     position: relative;
     width: 100%;
-    aspect-ratio: 1; /* Square */
+    aspect-ratio: 1;
+    /* Square */
     background: #000;
 }
 
@@ -198,14 +222,23 @@ button {
 
 #grid-overlay {
     position: absolute;
-    top: 0; left: 0; width: 100%; height: 100%;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     grid-template-rows: repeat(3, 1fr);
     pointer-events: none;
 }
-.grid-cell { border: 1px solid rgba(255,255,255,0.3); }
-.grid-cell:nth-child(5) { border: 2px solid rgba(255, 235, 59, 0.8); }
+
+.grid-cell {
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.grid-cell:nth-child(5) {
+    border: 2px solid rgba(255, 235, 59, 0.8);
+}
 
 #camera-controls {
     padding: 12px;
@@ -213,38 +246,78 @@ button {
     justify-content: space-between;
     align-items: center;
 }
-#instruction { font-size: 13px; color: var(--text-muted); }
+
+#instruction {
+    font-size: 13px;
+    color: var(--text-muted);
+}
 
 /* Bottom Panel used for Teaching Controls */
 #bottom-panel {
-    padding: 20px;
-    padding-bottom: calc(20px + var(--safe-area-bottom));
+    position: absolute;
+    bottom: max(20px, env(safe-area-inset-bottom));
+    left: 50%;
+    transform: translateX(-50%);
+    width: auto;
+    max-width: 95vw;
+    padding: 0;
+    pointer-events: none;
+    /* Let clicks pass through area */
     display: flex;
     justify-content: center;
-    width: 100%;
-    pointer-events: none; /* Container pass through */
+    align-items: flex-end;
+    z-index: 20;
 }
 
 #teaching-controls {
+    background: rgba(30, 30, 30, 0.6);
+    /* More transparent */
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+
+    padding: 12px 20px;
+    border-radius: 40px;
+    /* Pillow shape */
+
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 16px;
-    padding: 20px;
-    border-radius: 24px;
-    width: 100%;
-    max-width: 500px;
+
+    gap: 12px;
+    width: auto;
+    min-width: 320px;
+
+    pointer-events: auto;
+
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
 }
 
-/* Injecting sync toggle styles */
-#sync-toggle { transform: scale(1.2); }
-.control-row { display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 14px; }
+#teaching-controls.minimized {
+    transform: translateY(100%);
+    opacity: 0;
+}
+
+.control-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-muted);
+    font-size: 14px;
+}
 
 .control-group {
     display: flex;
     gap: 12px;
     width: 100%;
     justify-content: center;
+    align-items: center;
+}
+
+/* Injecting sync toggle styles */
+#sync-toggle {
+    transform: scale(1.2);
 }
 
 #solution-display {
@@ -252,20 +325,24 @@ button {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 12px;
-    border-top: 1px solid var(--glass-border);
-    padding-top: 16px;
+    gap: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 12px;
+    margin-top: 4px;
 }
 
 #solution-text {
     font-family: 'SF Mono', 'Menlo', monospace;
-    font-size: 15px;
+    font-size: 14px;
     color: var(--primary);
     text-align: center;
     width: 100%;
     overflow-x: auto;
     white-space: nowrap;
     scrollbar-width: none;
+    padding: 0 10px;
+    mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
 }
 
 #step-controls {
@@ -276,7 +353,10 @@ button {
 /* Loading Spinner */
 #loading {
     position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     background: #111;
     display: flex;
     flex-direction: column;
@@ -285,16 +365,27 @@ button {
     z-index: 1000;
     transition: opacity 0.5s;
 }
+
 .spinner {
-    width: 40px; height: 40px;
+    width: 40px;
+    height: 40px;
     border: 4px solid var(--secondary);
     border-top-color: var(--primary);
     border-radius: 50%;
     animation: spin 1s linear infinite;
     margin-bottom: 16px;
 }
-@keyframes spin { to { transform: rotate(360deg); } }
-.fade-out { opacity: 0; pointer-events: none; }
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.fade-out {
+    opacity: 0;
+    pointer-events: none;
+}
 
 /* Mobile Adjustments */
 @media (max-width: 600px) {
@@ -304,9 +395,9 @@ button {
 
     #camera-container {
         top: auto;
-        bottom: 20px; /* Instead of top, maybe bottom? Or verify space */
-        /* Actually, center modal is better for scanning */
-        top: 50%;
+        bottom: 20px;
+        /* Center modal but slightly higher */
+        top: 40%;
         left: 50%;
         transform: translate(-50%, -50%);
         right: auto;
@@ -314,32 +405,35 @@ button {
         max-width: 320px;
         z-index: 50;
     }
-    
+
     /* When hidden, slide down */
     #camera-container.hidden {
         transform: translate(-50%, -40%) scale(0.9);
     }
 
-    /* Bottom Panel acts as Bottom Sheet */
+    /* Mobile Adjustments: Still float, but maybe width 100% minus padding */
     #bottom-panel {
-        padding: 0;
-    }
-    
-    #teaching-controls {
-        border-radius: 24px 24px 0 0;
+        bottom: 20px;
         width: 100%;
-        max-width: 100%;
-        margin-bottom: 0;
-        padding-bottom: calc(20px + var(--safe-area-bottom));
-        border-bottom: none;
+        padding: 0 16px;
+    }
+
+    #teaching-controls {
+        width: 100%;
+        min-width: 0;
+        border-radius: 32px;
+        padding: 16px;
     }
 
     .control-group {
-        flex-direction: row; 
+        flex-direction: row;
     }
-    
-    .btn-primary, .btn-secondary {
+
+    .btn-primary,
+    .btn-secondary {
         flex: 1;
-        padding: 14px; /* Larger tap area */
+        padding: 12px 16px;
+        /* Slightly smaller on mobile height */
+        font-size: 15px;
     }
 }
