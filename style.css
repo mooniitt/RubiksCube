@@ -1,273 +1,345 @@
+:root {
+    --primary: #4A90E2;
+    --primary-hover: #357ABD;
+    --secondary: rgba(255, 255, 255, 0.15);
+    --secondary-hover: rgba(255, 255, 255, 0.25);
+    --text: #ffffff;
+    --text-muted: rgba(255, 255, 255, 0.7);
+    --glass-bg: rgba(20, 20, 20, 0.65);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --radius-lg: 16px;
+    --radius-md: 12px;
+    --radius-sm: 8px;
+    --safe-area-bottom: env(safe-area-inset-bottom, 20px);
+}
+
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
 body {
     margin: 0;
     overflow: hidden;
-    background-color: #1a1a1a;
-    font-family: 'Inter', sans-serif;
+    background-color: #111;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    color: var(--text);
 }
 
 #container {
     width: 100vw;
     height: 100vh;
     display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 0;
 }
 
-#loading {
+/* UI Overlay Container */
+#ui-container {
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    color: white;
-    font-size: 1.5rem;
-    pointer-events: none;
-    transition: opacity 0.5s ease;
-}
-
-.fade-out {
-    opacity: 0;
-}
-
-/* Camera UI */
-#camera-container {
-    position: absolute;
-    top: 20px;
-    left: 20px;
-    width: 300px;
-    height: 400px;
-    background: rgba(0, 0, 0, 0.8);
-    border-radius: 12px;
-    overflow: hidden;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+    pointer-events: none; /* Let clicks pass through to 3D */
     display: flex;
     flex-direction: column;
-    align-items: center;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-    transition: transform 0.3s ease, opacity 0.3s ease;
-    z-index: 100;
+    justify-content: space-between;
 }
 
-#camera-container.hidden {
-    transform: translateX(-120%);
+/* Glass Panel Utility */
+.glass-panel {
+    background: var(--glass-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    pointer-events: auto; /* Re-enable clicks */
+    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s ease;
+}
+
+.hidden {
     opacity: 0;
-    pointer-events: none;
+    pointer-events: none !important;
+    transform: translateY(20px) scale(0.95);
+}
+
+/* Top Bar */
+.top-bar {
+    width: 100%;
+    padding: 12px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--glass-border);
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    /* Mobile: slim */
+}
+
+.top-bar h1 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+    letter-spacing: -0.02em;
+    background: linear-gradient(to right, #fff, #aaa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* Buttons */
+button {
+    border: none;
+    outline: none;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.btn-icon {
+    background: var(--secondary);
+    color: var(--text);
+    padding: 8px 12px;
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    border: 1px solid var(--glass-border);
+}
+
+.btn-icon:hover {
+    background: var(--secondary-hover);
+    transform: translateY(-1px);
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: white;
+    padding: 12px 24px;
+    border-radius: var(--radius-lg);
+    font-weight: 600;
+    font-size: 16px;
+    box-shadow: 0 4px 12px rgba(74, 144, 226, 0.3);
+}
+
+.btn-primary:hover {
+    background: var(--primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(74, 144, 226, 0.4);
+}
+
+.btn-secondary {
+    background: var(--secondary);
+    color: var(--text);
+    padding: 12px 20px;
+    border-radius: var(--radius-lg);
+    font-weight: 500;
+    font-size: 15px;
+    border: 1px solid var(--glass-border);
+}
+
+.btn-secondary:hover {
+    background: var(--secondary-hover);
+}
+
+.btn-text {
+    background: transparent;
+    color: var(--text-muted);
+    padding: 4px;
+    font-size: 18px;
+}
+.btn-text:hover { color: var(--text); }
+
+.btn-primary-small {
+    background: var(--primary);
+    color: white;
+    padding: 8px 16px;
+    border-radius: var(--radius-md);
+    font-size: 14px;
+}
+
+/* Camera Container */
+#camera-container {
+    position: absolute;
+    top: 70px;
+    right: 20px;
+    width: 280px;
+    border-radius: var(--radius-lg);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.camera-header {
+    padding: 10px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(0,0,0,0.2);
+}
+.camera-header h3 { margin: 0; font-size: 14px; font-weight: 500; }
+
+.camera-viewport {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1; /* Square */
+    background: #000;
 }
 
 #camera-feed {
     width: 100%;
-    height: 300px; /* Aspect ratio roughly 1:1 or 4:3 cropped */
+    height: 100%;
     object-fit: cover;
-    background: #000;
 }
 
 #grid-overlay {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 300px;
-    height: 300px;
+    top: 0; left: 0; width: 100%; height: 100%;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     grid-template-rows: repeat(3, 1fr);
     pointer-events: none;
 }
-
-.grid-cell {
-    border: 1px solid rgba(255, 255, 255, 0.5);
-    box-sizing: border-box;
-}
-
-/* Center cell highlight */
-.grid-cell:nth-child(5) {
-    border: 2px solid rgba(255, 255, 0, 0.8);
-}
+.grid-cell { border: 1px solid rgba(255,255,255,0.3); }
+.grid-cell:nth-child(5) { border: 2px solid rgba(255, 235, 59, 0.8); }
 
 #camera-controls {
-    flex: 1;
+    padding: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+#instruction { font-size: 13px; color: var(--text-muted); }
+
+/* Bottom Panel used for Teaching Controls */
+#bottom-panel {
+    padding: 20px;
+    padding-bottom: calc(20px + var(--safe-area-bottom));
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    pointer-events: none; /* Container pass through */
+}
+
+#teaching-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 20px;
+    border-radius: 24px;
+    width: 100%;
+    max-width: 500px;
+}
+
+/* Injecting sync toggle styles */
+#sync-toggle { transform: scale(1.2); }
+.control-row { display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 14px; }
+
+.control-group {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+    justify-content: center;
+}
+
+#solution-display {
     width: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    padding: 10px;
-    gap: 5px;
-}
-
-#scan-btn {
-    background: #4A90E2;
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 600;
-    transition: background 0.2s;
-}
-
-#scan-btn:hover {
-    background: #357ABD;
-}
-
-#instruction {
-    color: #ccc;
-    font-size: 12px;
-    margin-top: 5px;
-}
-
-#main-controls {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    bottom: auto;
-    left: auto;
-    transform: none;
-    z-index: 100;
-}
-
-#teaching-controls {
-    position: absolute;
-    bottom: 100px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 100;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-    background: rgba(0, 0, 0, 0.6);
-    padding: 15px;
-    border-radius: 12px;
-    backdrop-filter: blur(10px);
-}
-
-.control-row {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-}
-
-button {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: white;
-    padding: 8px 16px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: all 0.2s;
-}
-
-button:hover {
-    background: rgba(255, 255, 255, 0.2);
-}
-
-button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.primary-btn {
-    background: #4A90E2;
-    border: none;
-    font-weight: 600;
-}
-
-.primary-btn:hover {
-    background: #357ABD;
+    gap: 12px;
+    border-top: 1px solid var(--glass-border);
+    padding-top: 16px;
 }
 
 #solution-text {
-    color: #fff;
-    font-family: monospace;
-    font-size: 14px;
-    max-width: 300px;
+    font-family: 'SF Mono', 'Menlo', monospace;
+    font-size: 15px;
+    color: var(--primary);
+    text-align: center;
+    width: 100%;
     overflow-x: auto;
     white-space: nowrap;
+    scrollbar-width: none;
 }
 
-#toggle-camera-btn {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: white;
-    padding: 12px 24px;
-    border-radius: 30px;
-    cursor: pointer;
-    font-size: 16px;
+#step-controls {
     display: flex;
+    gap: 16px;
+}
+
+/* Loading Spinner */
+#loading {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: #111;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
     align-items: center;
-    gap: 8px;
-    transition: all 0.2s;
+    z-index: 1000;
+    transition: opacity 0.5s;
 }
-
-#toggle-camera-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-    transform: translateY(-2px);
+.spinner {
+    width: 40px; height: 40px;
+    border: 4px solid var(--secondary);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 16px;
 }
+@keyframes spin { to { transform: rotate(360deg); } }
+.fade-out { opacity: 0; pointer-events: none; }
 
-
-/* Mobile Optimization */
+/* Mobile Adjustments */
 @media (max-width: 600px) {
-    #teaching-controls {
-        width: 90%;
-        bottom: 80px;
-        padding: 10px;
-        align-items: center;
-    }
-
-    .control-row {
-        flex-wrap: wrap;
-        justify-content: center;
-        width: 100%;
-        gap: 8px;
-    }
-
-    button {
-        padding: 10px 20px; /* Larger touch target */
-        font-size: 14px;
-        flex: 1 0 auto; /* Allow grow */
-        white-space: nowrap;
-    }
-
-    #solution-text {
-        width: 100%;
-        text-align: center;
-        margin-top: 5px;
-        white-space: normal;
-        word-break: break-all;
+    .top-bar {
+        padding: 8px 16px;
     }
 
     #camera-container {
-        width: 90%;
-        height: auto;
+        top: auto;
+        bottom: 20px; /* Instead of top, maybe bottom? Or verify space */
+        /* Actually, center modal is better for scanning */
+        top: 50%;
         left: 50%;
-        top: 10%;
-        transform: translateX(-50%);
-        max-height: 80vh;
-    }
-    
-    #camera-container.hidden {
-        transform: translateX(-50%) translateY(-150%); /* Slide up */
-    }
-
-    #camera-feed {
-        height: 300px; /* Fixed height for consistency */
-    }
-
-    #grid-overlay {
-        width: 100%;
-        height: 300px; /* Match video */
-    }
-
-    #toggle-camera-btn {
+        transform: translate(-50%, -50%);
+        right: auto;
         width: 90%;
-        justify-content: center;
-        bottom: 20px; /* Lift up a bit */
+        max-width: 320px;
+        z-index: 50;
     }
     
-    #main-controls {
-        width: auto;
-        top: 20px;
-        right: 20px;
-        bottom: auto;
-        justify-content: flex-end;
+    /* When hidden, slide down */
+    #camera-container.hidden {
+        transform: translate(-50%, -40%) scale(0.9);
+    }
+
+    /* Bottom Panel acts as Bottom Sheet */
+    #bottom-panel {
+        padding: 0;
+    }
+    
+    #teaching-controls {
+        border-radius: 24px 24px 0 0;
+        width: 100%;
+        max-width: 100%;
+        margin-bottom: 0;
+        padding-bottom: calc(20px + var(--safe-area-bottom));
+        border-bottom: none;
+    }
+
+    .control-group {
+        flex-direction: row; 
+    }
+    
+    .btn-primary, .btn-secondary {
+        flex: 1;
+        padding: 14px; /* Larger tap area */
     }
 }
