@@ -3,8 +3,9 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { CameraManager } from './cameraData.js';
 import { SolverManager } from './solver.js';
-import { initI18n, t } from './i18n.js';
+import { initI18n, t, getLang } from './i18n.js';
 import { ParticleSystem } from './particles.js';
+import { algorithms } from './algorithms.js';
 
 // Configuration
 const CUBE_SIZE = 1;
@@ -206,6 +207,84 @@ function setupTeachingControls() {
         };
         playNext();
     });
+
+    setupAlgorithmControls();
+}
+
+function setupAlgorithmControls() {
+    const list = document.getElementById('formula-list');
+    const panel = document.getElementById('formula-panel');
+    const openBtn = document.getElementById('formula-btn');
+    const closeBtn = document.getElementById('close-formula');
+
+    // Populate List
+    algorithms.forEach(alg => {
+        const div = document.createElement('div');
+        div.className = 'formula-item';
+        
+        // Determine name based on lang
+        const lang = getLang();
+        const name = lang === 'zh' ? (alg.name_zh || alg.name_en) : alg.name_en;
+
+        div.innerHTML = `
+            <div class="formula-name">${name}</div>
+            <div class="formula-moves">${alg.moves}</div>
+        `;
+        
+        div.addEventListener('click', () => {
+             loadAlgorithm(alg);
+             panel.classList.add('hidden'); // Close on select
+        });
+        
+        list.appendChild(div);
+    });
+
+    openBtn.addEventListener('click', () => {
+        // Re-render to ensure language is correct
+        list.innerHTML = '';
+        algorithms.forEach(alg => {
+            const div = document.createElement('div');
+            div.className = 'formula-item';
+            const lang = getLang();
+            const name = lang === 'zh' ? (alg.name_zh || alg.name_en) : alg.name_en;
+            div.innerHTML = `
+                <div class="formula-name">${name}</div>
+                <div class="formula-moves">${alg.moves}</div>
+            `;
+            div.addEventListener('click', () => {
+                 loadAlgorithm(alg);
+                 panel.classList.add('hidden');
+            });
+            list.appendChild(div);
+        });
+
+        panel.classList.remove('hidden');
+    });
+
+    closeBtn.addEventListener('click', () => {
+        panel.classList.add('hidden');
+    });
+}
+
+function loadAlgorithm(alg) {
+    const solutionDisplay = document.getElementById('solution-display');
+    const text = document.getElementById('solution-text');
+    const controls = document.getElementById('step-controls');
+
+    // Reset state
+    // moveHistory = []; // Optional: Clear history
+    solutionMoves = alg.moves.split(' ').filter(m => m.length > 0);
+    currentMoveIndex = 0;
+
+    // Determine name based on lang
+    const lang = getLang();
+    const name = lang === 'zh' ? (alg.name_zh || alg.name_en) : alg.name_en;
+
+    text.textContent = `${name}: ${alg.moves}`;
+    text.style.color = "#4A90E2";
+    
+    solutionDisplay.classList.remove('hidden');
+    controls.style.display = 'flex';
 }
 
 function scrambleCube() {

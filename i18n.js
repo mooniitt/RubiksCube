@@ -19,7 +19,10 @@ const translations = {
         'face_left': "左 (Left)",
         'face_top': "上 (Top)",
         'face_bottom': "下 (Bottom)",
-        'scan_btn_prefix': "扫描 "
+        'scan_btn_prefix': "扫描 ",
+        'formula_btn': "📜 公式库",
+        'formula_title': "选择公式",
+        'formula_apply': "演示"
     },
     'en': {
         'app_title': "Rubik's 3D Pro",
@@ -41,7 +44,10 @@ const translations = {
         'face_left': "Left",
         'face_top': "Top",
         'face_bottom': "Bottom",
-        'scan_btn_prefix': "Scan "
+        'scan_btn_prefix': "Scan ",
+        'formula_btn': "📜 Algorithms",
+        'formula_title': "Select Algorithm",
+        'formula_apply': "Demo"
     }
 };
 
